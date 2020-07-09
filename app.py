@@ -97,7 +97,7 @@ def make_default_figure(
 
 
 img = image.load_img("assets/BraTS19_2013_10_1_flair.nii")
-img = img.get_data().transpose(2, 0, 1).astype("float")
+img = img.get_data().transpose(2, 0, 1)[::-1].astype("float")
 print("img.shape", img.shape)
 img = img_as_ubyte((img - img.min()) / (img.max() - img.min()))
 
@@ -180,13 +180,15 @@ app.layout = html.Div(
                 ],
             ),
         ),
+        html.Div(children=[
         dcc.Checklist(
             id="show-seg-check",
             options=[{"label": "Show segmentation", "value": "show"},],
             value=["show"],
         ),
         html.Button("Undo", id="undo-button", n_clicks=0),
-        html.Button("Redo", id="redo-button", n_clicks=0),
+        html.Button("Redo", id="redo-button", n_clicks=0),]),
+        html.Div(children=[
         dcc.Graph(id="image-display-graph-top", figure=top_fig),
         html.Div(id="image-select-top-display"),
         dcc.Slider(
@@ -195,8 +197,9 @@ app.layout = html.Div(
             max=len(img_slices[0]),
             step=1,
             updatemode="drag",
-            value=0,
-        ),
+            value=len(img_slices[0]) // 2,
+            ),], style={'width':'45%', 'display':'inline-block'}),
+        html.Div(children=[
         dcc.Graph(id="image-display-graph-side", figure=side_fig),
         html.Div(id="image-select-side-display"),
         dcc.Slider(
@@ -205,8 +208,8 @@ app.layout = html.Div(
             max=len(img_slices[1]),
             step=1,
             updatemode="drag",
-            value=0,
-        ),
+            value=len(img_slices[1]) // 2,
+            ),], style={'width':'45%', 'display':'inline-block'}),
     ]
 )
 
