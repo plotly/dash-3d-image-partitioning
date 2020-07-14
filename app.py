@@ -19,7 +19,7 @@ import io
 import base64
 import skimage
 
-DEBUG_MASK=False
+DEBUG_MASK = False
 DEFAULT_STROKE_COLOR = px.colors.qualitative.Light24[0]
 DEFAULT_STROKE_WIDTH = 5
 # the scales for the top and side images (they might be different)
@@ -27,7 +27,7 @@ DEFAULT_STROKE_WIDTH = 5
 # example I have observed the masks getting scaled unevenly, maybe because the
 # axes are actually scaled evenly (fixed to the x axis?) but then the mask gets
 # scaled differently?
-hwscales = [(2,2),(2,2)]
+hwscales = [(2, 2), (2, 2)]
 # the number of dimensions displayed
 NUM_DIMS_DISPLAYED = 2  # top and side
 # the color of the triangles displaying the slice number
@@ -100,15 +100,17 @@ def make_default_figure(
     )
     return fig
 
+
 img = image.load_img("assets/BraTS19_2013_10_1_flair.nii")
 img = img.get_data().transpose(2, 0, 1)[::-1].astype("float")
 print("img.shape", img.shape)
 img = img_as_ubyte((img - img.min()) / (img.max() - img.min()))
 
+
 def make_empty_found_segments():
     """ fstc_slices is initialized to a bunch of images containing nothing (clear pixels) """
     found_segs_tensor = np.zeros_like(img)
-    # convert to a colored image (but it will just be colored "clear") 
+    # convert to a colored image (but it will just be colored "clear")
     fst_colored = image_utils.label_to_colors(
         found_segs_tensor,
         colormap=["#000000", "#8A2BE2"],
@@ -123,6 +125,7 @@ def make_empty_found_segments():
         for j in range(NUM_DIMS_DISPLAYED)
     ]
     return fstc_slices
+
 
 if len(LOAD_SUPERPIXEL) > 0:
     # load partitioned image (to save time)
@@ -159,7 +162,7 @@ img_slices, seg_slices = [
 found_seg_slices = make_empty_found_segments()
 
 app = dash.Dash(__name__)
-server=app.server
+server = app.server
 
 top_fig, side_fig = [
     make_default_figure(
@@ -170,14 +173,18 @@ top_fig, side_fig = [
     for i in range(NUM_DIMS_DISPLAYED)
 ]
 
+
 def make_default_3d_fig():
-    fig=go.Figure(data=[go.Mesh3d()])
-    fig.update_layout(scene_camera=dict(
-        up=dict(x=0, y=0, z=1),
-        center=dict(x=0, y=0, z=0),
-        eye=dict(x=1.25, y=1.25, z=1.25)
-    ))
+    fig = go.Figure(data=[go.Mesh3d()])
+    fig.update_layout(
+        scene_camera=dict(
+            up=dict(x=0, y=0, z=1),
+            center=dict(x=0, y=0, z=0),
+            eye=dict(x=1.25, y=1.25, z=1.25),
+        )
+    )
     return fig
+
 
 app.layout = html.Div(
     [
@@ -209,7 +216,7 @@ app.layout = html.Div(
             ),
         ),
         # the image data of the found segmentation is stored here before it is downloaded
-        dcc.Store(id="found-image-tensor-data",data=""),
+        dcc.Store(id="found-image-tensor-data", data=""),
         # In this implementation we want to prevent needless passing of the
         # large image array from client to server, so when "downloaded-button"
         # is clicked, the contents of the "found-segs" store is converted to nii
@@ -222,64 +229,81 @@ app.layout = html.Div(
         # base64-encoded data between client and server: we let the browser
         # handle how data from the browser can be written to the client's
         # filesystem.
-        html.Button(
-            "Download found partition", id="download-button"
-        ),
-        html.A(
-            id="download-link",
-            download="found_image.nii",
-        ),
+        html.Button("Download found partition", id="download-button"),
+        html.A(id="download-link", download="found_image.nii",),
         # required so callback triggered by writing to "found-image-tensor-data"
         # has an output
+        html.Div(id="dummy", style={"display": "none"}),
+        html.Div(id="dummy2", style={"display": "none"}, children=""),
         html.Div(
-            id="dummy",
-            style={"display":"none"}
+            children=[
+                dcc.Checklist(
+                    id="show-seg-check",
+                    options=[{"label": "Show segmentation", "value": "show"},],
+                    value=["show"],
+                ),
+                html.Button("Undo", id="undo-button", n_clicks=0),
+                html.Button("Redo", id="redo-button", n_clicks=0),
+            ]
         ),
-        html.Div(
-            id="dummy2",
-            style={"display":"none"},
-            children=""
-        ),
-        html.Div(children=[
-        dcc.Checklist(
-            id="show-seg-check",
-            options=[{"label": "Show segmentation", "value": "show"},],
-            value=["show"],
-        ),
-        html.Button("Undo", id="undo-button", n_clicks=0),
-        html.Button("Redo", id="redo-button", n_clicks=0),]),
         dcc.Checklist(
             id="show-hide-check",
             options=[{"label": "Show in 3D", "value": "show"},],
             value=[],
         ),
-        html.Div(id='2D-graphs',children=[
-            html.Div(children=[
-            dcc.Graph(id="image-display-graph-top", figure=top_fig),
-            html.Div(id="image-select-top-display"),
-            dcc.Slider(
-                id="image-select-top",
-                min=0,
-                max=len(img_slices[0]),
-                step=1,
-                updatemode="drag",
-                value=len(img_slices[0]) // 2,
-                ),], style={'width':'45%', 'display':'inline-block'}),
-            html.Div(children=[
-            dcc.Graph(id="image-display-graph-side", figure=side_fig),
-            html.Div(id="image-select-side-display"),
-            dcc.Slider(
-                id="image-select-side",
-                min=0,
-                max=len(img_slices[1]),
-                step=1,
-                updatemode="drag",
-                value=len(img_slices[1]) // 2,
-                ),], style={'width':'45%', 'display':'inline-block'}),
-        ]),
-        html.Div(id="3D-graphs",children=[
-            dcc.Graph("image-display-graph-3d",figure=make_default_3d_fig())
-        ])
+        html.Div(
+            id="2D-graphs",
+            children=[
+                html.Div(
+                    children=[
+                        dcc.Graph(id="image-display-graph-top", figure=top_fig),
+                        html.Div(id="image-select-top-display"),
+                        dcc.Slider(
+                            id="image-select-top",
+                            min=0,
+                            max=len(img_slices[0]),
+                            step=1,
+                            updatemode="drag",
+                            value=len(img_slices[0]) // 2,
+                        ),
+                    ],
+                    style={"width": "45%", "display": "inline-block"},
+                ),
+                html.Div(
+                    children=[
+                        dcc.Graph(id="image-display-graph-side", figure=side_fig),
+                        html.Div(id="image-select-side-display"),
+                        dcc.Slider(
+                            id="image-select-side",
+                            min=0,
+                            max=len(img_slices[1]),
+                            step=1,
+                            updatemode="drag",
+                            value=len(img_slices[1]) // 2,
+                        ),
+                    ],
+                    style={"width": "45%", "display": "inline-block"},
+                ),
+            ],
+        ),
+        html.Div(
+            id="3D-graphs",
+            children=[
+                dcc.Graph("image-display-graph-3d", figure=make_default_3d_fig())
+            ],
+        ),
+        dcc.Store(
+            id="fig-3d-scene",
+            data=dict(
+                scene=dict(
+                    camera=dict(
+                        up=dict(x=0, y=0, z=1),
+                        center=dict(x=0, y=0, z=0),
+                        eye=dict(x=1.25, y=1.25, z=1.25),
+                    )
+                )
+            ),
+        ),
     ]
 )
 
@@ -484,58 +508,65 @@ def draw_shapes_react(
 def _decode_b64_slice(s):
     return base64.b64decode(s.encode())
 
+
 def slice_image_list_to_ndarray(fstc_slices):
     # convert encoded slices to array
     # TODO eventually make it format agnostic, right now we just assume png and
     # strip off length equal to uri_header from the uri string
-    uri_header="data:image/png;base64,"
+    uri_header = "data:image/png;base64,"
     # preallocating the final tensor by reading the first image makes converting
     # much faster (because all the images have the same dimensions)
-    n_slices=len(fstc_slices)
-    first_img=plot_common.str_to_img_ndarrary(
-        _decode_b64_slice(fstc_slices[0][len(uri_header):]))
-    fstc_ndarray=np.zeros((n_slices,)+first_img.shape,dtype=first_img.dtype)
-    print('first_img.dtype',first_img.dtype)
-    fstc_ndarray[0]=first_img
-    for n,img_slice in enumerate(fstc_slices[1:]):
-        img=plot_common.str_to_img_ndarrary(
-            _decode_b64_slice(img_slice[len(uri_header):]))
-        fstc_ndarray[n]=img
-    print('fstc_ndarray.shape',fstc_ndarray.shape)
+    n_slices = len(fstc_slices)
+    first_img = plot_common.str_to_img_ndarrary(
+        _decode_b64_slice(fstc_slices[0][len(uri_header) :])
+    )
+    fstc_ndarray = np.zeros((n_slices,) + first_img.shape, dtype=first_img.dtype)
+    print("first_img.dtype", first_img.dtype)
+    fstc_ndarray[0] = first_img
+    for n, img_slice in enumerate(fstc_slices[1:]):
+        img = plot_common.str_to_img_ndarrary(
+            _decode_b64_slice(img_slice[len(uri_header) :])
+        )
+        fstc_ndarray[n] = img
+    print("fstc_ndarray.shape", fstc_ndarray.shape)
     # transpose back to original
-    print("fstc_ndarray.shape",fstc_ndarray.shape)
-    return fstc_ndarray.transpose((1,2,0,3))
+    print("fstc_ndarray.shape", fstc_ndarray.shape)
+    return fstc_ndarray.transpose((1, 2, 0, 3))
+
 
 # Converts found slices to nii file and encodes in b64 so it can be downloaded
 def save_found_slices(fstc_slices):
     # we just save the first view (it makes no difference in the end)
-    fstc_slices=fstc_slices[0]
-    fstc_ndarray=slice_image_list_to_ndarray(fstc_slices)
+    fstc_slices = fstc_slices[0]
+    fstc_ndarray = slice_image_list_to_ndarray(fstc_slices)
     # if the tensor is all zero (no partitions found) return None
     if np.all(fstc_ndarray == 0):
         return None
     # TODO add affine
     # technique for writing nii to bytes from here:
     # https://gist.github.com/arokem/423d915e157b659d37f4aded2747d2b3
-    fstc_nii=nib.Nifti1Image(skimage.img_as_ubyte(fstc_ndarray),affine=None)
+    fstc_nii = nib.Nifti1Image(skimage.img_as_ubyte(fstc_ndarray), affine=None)
     fstcbytes = io.BytesIO()
-    file_map = fstc_nii.make_file_map({'image':fstcbytes,'header':fstcbytes})
+    file_map = fstc_nii.make_file_map({"image": fstcbytes, "header": fstcbytes})
     fstc_nii.to_file_map(file_map)
     fstcb64 = base64.b64encode(fstcbytes.getvalue()).decode()
     return fstcb64
 
+
 @app.callback(
-Output("found-image-tensor-data","data"),
-[Input("download-button","n_clicks")],
-[State("found-segs","data")])
-def download_button_react(download_button_n_clicks,found_segs_data):
+    Output("found-image-tensor-data", "data"),
+    [Input("download-button", "n_clicks")],
+    [State("found-segs", "data")],
+)
+def download_button_react(download_button_n_clicks, found_segs_data):
     ret = save_found_slices(found_segs_data)
     if ret is None:
         return ""
     return ret
 
+
 app.clientside_callback(
-"""
+    """
 function (found_image_tensor_data) {
     if (found_image_tensor_data.length <= 0) {
         return "";
@@ -549,13 +580,13 @@ function (found_image_tensor_data) {
     let url = URL.createObjectURL(b);
     return url;
 }
-"""
-,
-Output("download-link","href"),
-[Input("found-image-tensor-data","data")])
+""",
+    Output("download-link", "href"),
+    [Input("found-image-tensor-data", "data")],
+)
 
 app.clientside_callback(
-"""
+    """
 function (href) {
     if (href != "") {
         let download_a=document.getElementById("download-link");
@@ -564,10 +595,12 @@ function (href) {
     return '';
 }
 """,
-Output("dummy","children"),
-[Input("download-link","href")])
+    Output("dummy", "children"),
+    [Input("download-link", "href")],
+)
 
-app.clientside_callback("""
+app.clientside_callback(
+    """
 function (show_hide_check_value) {
     console.log("show_hide_check_value");
     console.log(show_hide_check_value);
@@ -584,36 +617,46 @@ function (show_hide_check_value) {
     return ""; 
 }
 """,
-Output("dummy2","children"),
-[Input("show-hide-check","value")])
+    Output("dummy2", "children"),
+    [Input("show-hide-check", "value")],
+)
+
+# This could in theory be clientside but let's try our luck with serverside
+@app.callback(
+    Output("fig-3d-scene", "data"), [Input("image-display-graph-3d", "relayoutData")]
+)
+def store_scene_data(graph_3d_relayoutData):
+    if graph_3d_relayoutData is not None and ("scene.camera" in graph_3d_relayoutData):
+        return graph_3d_relayoutData
+    return dash.no_update
+
 
 @app.callback(
-Output("image-display-graph-3d","figure"),
-[Input("dummy2","children")],
-[State("found-segs","data"),
- State("image-display-graph-3d","figure")])
-def populate_3d_graph(dummy2_children,found_segs_data,old_fig):
-    with open("/tmp/fig.txt","w") as fd:
-        fd.write(str(old_fig))
+    Output("image-display-graph-3d", "figure"),
+    [Input("dummy2", "children")],
+    [State("found-segs", "data"), State("fig-3d-scene", "data")],
+)
+def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
     if dummy2_children != "3d shown":
         return dash.no_update
-    segs_ndarray=slice_image_list_to_ndarray(found_segs_data[0])
+    segs_ndarray = slice_image_list_to_ndarray(found_segs_data[0])
     # image, color
-    images=[
-        (segs_ndarray[:,:,::-1,:],'purple'),
-        (img.transpose((1,2,0))[:,:,::-1],'grey')
+    images = [
+        (segs_ndarray[:, :, ::-1, :], "purple"),
+        (img.transpose((1, 2, 0))[:, :, ::-1], "grey"),
     ]
-    data=[]
-    for im,color in images:
-        im=image_utils.combine_last_dim(im)
-        print('im.shape',im.shape)
-        verts,faces,normals,values=measure.marching_cubes(im,0)
-        x,y,z=verts.T
-        i,j,k=faces.T
-        data.append(
-        go.Mesh3d(x=x,y=y,z=z,color=color,opacity=0.5,i=i,j=j,k=k))
-    fig=go.Figure(data=data)
+    data = []
+    for im, color in images:
+        im = image_utils.combine_last_dim(im)
+        print("im.shape", im.shape)
+        verts, faces, normals, values = measure.marching_cubes(im, 0)
+        x, y, z = verts.T
+        i, j, k = faces.T
+        data.append(go.Mesh3d(x=x, y=y, z=z, color=color, opacity=0.5, i=i, j=j, k=k))
+    fig = go.Figure(data=data)
+    fig.update_layout(**last_3d_scene)
     return fig
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
