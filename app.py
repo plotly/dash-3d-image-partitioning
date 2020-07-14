@@ -18,6 +18,7 @@ from sys import exit
 import io
 import base64
 import skimage
+import time
 
 DEBUG_MASK = False
 DEFAULT_STROKE_COLOR = px.colors.qualitative.Light24[0]
@@ -291,6 +292,7 @@ app.layout = html.Div(
             children=[
                 dcc.Graph("image-display-graph-3d", figure=make_default_3d_fig())
             ],
+            style={"display": "none"}
         ),
         dcc.Store(
             id="fig-3d-scene",
@@ -604,13 +606,16 @@ app.clientside_callback(
 function (show_hide_check_value) {
     console.log("show_hide_check_value");
     console.log(show_hide_check_value);
-    var graphs_2d = document.getElementById("2D-graphs");
+    var graphs_2d = document.getElementById("2D-graphs"),
+        graphs_3d = document.getElementById("3D-graphs");
     if (graphs_2d) {
         if (show_hide_check_value[0] === "show") {
             graphs_2d.style.display = "none";
+            graphs_3d.style.display = "";
             return "3d shown"; 
         } else {
             graphs_2d.style.display = "";
+            graphs_3d.style.display = "none";
             return "2d shown"; 
         }
     }
@@ -637,6 +642,7 @@ def store_scene_data(graph_3d_relayoutData):
     [State("found-segs", "data"), State("fig-3d-scene", "data")],
 )
 def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
+    start_time=time.time()
     if dummy2_children != "3d shown":
         return dash.no_update
     segs_ndarray = slice_image_list_to_ndarray(found_segs_data[0])
@@ -655,6 +661,9 @@ def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
         data.append(go.Mesh3d(x=x, y=y, z=z, color=color, opacity=0.5, i=i, j=j, k=k))
     fig = go.Figure(data=data)
     fig.update_layout(**last_3d_scene)
+    end_time=time.time()
+    print('serverside 3D generation took: %f seconds' % (end_time - start_time,))
+    #fig.write_json('/tmp/fig.json')
     return fig
 
 
