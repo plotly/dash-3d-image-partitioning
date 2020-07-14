@@ -279,7 +279,10 @@ app.layout = html.Div(
         ]),
         html.Div(id="3D-graphs",children=[
             dcc.Graph("image-display-graph-3d",figure=make_default_3d_fig())
-        ])
+        ]),
+        dcc.Store(id="last-scene-camera",data={
+        "scene.aspectratio":{"x":1,"y":1,"z":1},
+        "scene.camera":{'up': {'x': 0, 'y': 0, 'z': 1}, 'center': {'x': 0, 'y': 0, 'z': 0}, 'eye': {'x': 1.25, 'y': 1.25, 'z': 1.25}, 'projection': {'type': 'perspective'}}})
     ]
 )
 
@@ -587,16 +590,31 @@ function (show_hide_check_value) {
 Output("dummy2","children"),
 [Input("show-hide-check","value")])
 
+app.clientside_callback(
+"""
+function (graph_3d_relayoutData,last_scene_camera) {
+    console.log("image-display-graph-3d.relayoutData");
+    console.log(graph_3d_relayoutData);
+    if (graph_3d_relayoutData && ('scene.camera' in graph_3d_relayoutData) &&
+        ('scene.aspectratio' in graph_3d_relayoutData)) {
+        return json_copy(graph_3d_relayoutData);
+    }
+    return json_copy(last_scene_camera);
+}
+""",
+Output("last-scene-camera","data"),
+[Input("image-display-graph-3d","relayoutData")],
+[State("last-scene-camera","data")])
+
 @app.callback(
 Output("image-display-graph-3d","figure"),
-[Input("dummy2","children")],
+[Input("image-display-graph-top", "figure"),
+Input("image-display-graph-side", "figure")],
 [State("found-segs","data"),
- State("image-display-graph-3d","figure")])
-def populate_3d_graph(dummy2_children,found_segs_data,old_fig):
-    with open("/tmp/fig.txt","w") as fd:
-        fd.write(str(old_fig))
-    if dummy2_children != "3d shown":
-        return dash.no_update
+ State("last-scene-camera","data")])
+def populate_3d_graph(graph_top_figure,graph_side_figure,
+found_segs_data,last_scene_camera_data):
+    print("last_scene_camera_data:",last_scene_camera_data)
     segs_ndarray=slice_image_list_to_ndarray(found_segs_data[0])
     # image, color
     images=[
@@ -606,13 +624,16 @@ def populate_3d_graph(dummy2_children,found_segs_data,old_fig):
     data=[]
     for im,color in images:
         im=image_utils.combine_last_dim(im)
-        print('im.shape',im.shape)
-        verts,faces,normals,values=measure.marching_cubes(im,0)
-        x,y,z=verts.T
-        i,j,k=faces.T
-        data.append(
-        go.Mesh3d(x=x,y=y,z=z,color=color,opacity=0.5,i=i,j=j,k=k))
+        try:
+            verts,faces,normals,values=measure.marching_cubes(im,0)
+            x,y,z=verts.T
+            i,j,k=faces.T
+            data.append(
+            go.Mesh3d(x=x,y=y,z=z,color=color,opacity=0.5,i=i,j=j,k=k))
+        except RuntimeError:
+            continue
     fig=go.Figure(data=data)
+    fig.update_layout(**last_scene_camera_data)
     return fig
 
 if __name__ == "__main__":
