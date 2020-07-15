@@ -239,7 +239,7 @@ app.layout = html.Div(
         # required so callback triggered by writing to "found-image-tensor-data"
         # has an output
         html.Div(id="dummy", style={"display": "none"}),
-        html.Div(id="dummy2", style={"display": "none"}, children=""),
+        html.Div(id="dummy2", style={"display": "none"}, children=",0"),
         html.Div(
             children=[
                 dcc.Checklist(
@@ -303,6 +303,8 @@ app.layout = html.Div(
             style={"display": "none"},
         ),
         dcc.Store(id="fig-3d-scene", data=default_3d_layout,),
+        dcc.Store(id="current-render-id", data=0),
+        dcc.Store(id="last-render-id", data=0),
     ],
 )
 
@@ -390,6 +392,14 @@ side_slice_number,
 drawn_shapes_data,
 undo_data)
 {
+    // Ignore if "shapes" not in any of the relayout data
+    let triggered = window.dash_clientside.callback_context.triggered.map(
+        t => t['prop_id'])[0];
+    if ((triggered === "image-display-graph-top.relayoutData" && !("shapes" in
+        top_relayout_data)) || (triggered === "image-display-graph-side.relayoutData"
+        && !("shapes" in side_relayout_data))) {
+        return [window.dash_clientside.no_update,window.dash_clientside.no_update];
+    }
     drawn_shapes_data = json_copy(drawn_shapes_data);
     let ret = undo_track_slice_figure_shapes (
     [top_relayout_data,side_relayout_data],
@@ -434,15 +444,19 @@ undo_data)
 
 
 @app.callback(
-    Output("found-segs", "data"),
+    [Output("found-segs", "data"), Output("current-render-id", "data")],
     [Input("drawn-shapes", "data")],
     [
         State("image-display-graph-top", "figure"),
         State("image-display-graph-side", "figure"),
+        State("current-render-id", "data"),
     ],
 )
 def draw_shapes_react(
-    drawn_shapes_data, image_display_top_figure, image_display_side_figure
+    drawn_shapes_data,
+    image_display_top_figure,
+    image_display_side_figure,
+    current_render_id,
 ):
 
     if any(
@@ -501,7 +515,7 @@ def draw_shapes_react(
         ]
         for j in range(NUM_DIMS_DISPLAYED)
     ]
-    return fstc_slices
+    return fstc_slices, current_render_id + 1
 
 
 def _decode_b64_slice(s):
@@ -600,27 +614,30 @@ function (href) {
 
 app.clientside_callback(
     """
-function (show_hide_check_value) {
+function (show_hide_check_value,current_render_id) {
     console.log("show_hide_check_value");
     console.log(show_hide_check_value);
     var graphs_2d = document.getElementById("2D-graphs"),
-        graphs_3d = document.getElementById("3D-graphs");
+        graphs_3d = document.getElementById("3D-graphs"),
+        ret = "";
     if (graphs_2d && graphs_3d) {
         if (show_hide_check_value[0] === "show") {
             graphs_2d.style.display = "none";
             graphs_3d.style.display = "";
-            return "3d shown"; 
+            ret = "3d shown";
         } else {
             graphs_2d.style.display = "";
             graphs_3d.style.display = "none";
-            return "2d shown"; 
+            ret = "2d shown";
         }
     }
-    return ""; 
+    ret += ","+current_render_id;
+    return ret;
 }
 """,
     Output("dummy2", "children"),
     [Input("show-hide-check", "value")],
+    [State("current-render-id", "data")],
 )
 
 # This could in theory be clientside but let's try our luck with serverside
@@ -639,20 +656,28 @@ def store_scene_data(graph_3d_relayoutData, last_3d_scene):
 
 
 @app.callback(
-    Output("image-display-graph-3d", "figure"),
+    [Output("image-display-graph-3d", "figure"), Output("last-render-id", "data")],
     [Input("dummy2", "children")],
-    [State("found-segs", "data"), State("fig-3d-scene", "data")],
+    [
+        State("found-segs", "data"),
+        State("fig-3d-scene", "data"),
+        State("last-render-id", "data"),
+    ],
 )
-def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
-    # TODO: Maybe a way to pass a "hash" of what is being shown, which is
-    # updated when the 2d figures have shapes added. Then when this callback is
-    # run, it checks the number and if its own number is different, it draws the
-    # 3D anew, and sets its number to the same as the "hash". This is so that
-    # next time, if show/hide is toggled, but the "hash" is the same as what was
-    # shown last time, it won't draw anything, saving time.
+def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene, last_render_id):
+    # extract which graph shown and the current render id
+    graph_shown, current_render_id = dummy2_children.split(",")
+    current_render_id = int(current_render_id)
     start_time = time.time()
-    if dummy2_children != "3d shown":
+    print(
+        "might render 3D, current_id: %d, last_id: %d"
+        % (current_render_id, last_render_id)
+    )
+    if graph_shown != "3d shown" or current_render_id == last_render_id:
+        if current_render_id == last_render_id:
+            print("not rendering 3D because it is up to date")
         return dash.no_update
+    print("rendering 3D")
     segs_ndarray = slice_image_list_to_ndarray(found_segs_data[0])
     # image, color
     images = [
@@ -676,7 +701,7 @@ def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
     end_time = time.time()
     print("serverside 3D generation took: %f seconds" % (end_time - start_time,))
     # fig.write_json('/tmp/fig.json')
-    return fig
+    return (fig, current_render_id)
 
 
 if __name__ == "__main__":
