@@ -443,33 +443,9 @@ undo_data)
 )
 
 
-@app.callback(
-    [Output("found-segs", "data"), Output("current-render-id", "data")],
-    [Input("drawn-shapes", "data")],
-    [
-        State("image-display-graph-top", "figure"),
-        State("image-display-graph-side", "figure"),
-        State("current-render-id", "data"),
-    ],
-)
-def draw_shapes_react(
-    drawn_shapes_data,
-    image_display_top_figure,
-    image_display_side_figure,
-    current_render_id,
+def shapes_to_segs(
+    drawn_shapes_data, image_display_top_figure, image_display_side_figure,
 ):
-
-    if any(
-        [
-            e is None
-            for e in [
-                drawn_shapes_data,
-                image_display_top_figure,
-                image_display_side_figure,
-            ]
-        ]
-    ):
-        return dash.no_update
     masks = np.zeros_like(img)
     for j, (graph_figure, (hscale, wscale)) in enumerate(
         zip([image_display_top_figure, image_display_side_figure], hwscales)
@@ -501,6 +477,38 @@ def draw_shapes_react(
         # for each label found, select all of the segment with that label
         for l in labels:
             found_segs_tensor[seg == l] = 1
+    return found_segs_tensor
+
+
+@app.callback(
+    [Output("found-segs", "data"), Output("current-render-id", "data")],
+    [Input("drawn-shapes", "data")],
+    [
+        State("image-display-graph-top", "figure"),
+        State("image-display-graph-side", "figure"),
+        State("current-render-id", "data"),
+    ],
+)
+def draw_shapes_react(
+    drawn_shapes_data,
+    image_display_top_figure,
+    image_display_side_figure,
+    current_render_id,
+):
+    if any(
+        [
+            e is None
+            for e in [
+                drawn_shapes_data,
+                image_display_top_figure,
+                image_display_side_figure,
+            ]
+        ]
+    ):
+        return dash.no_update
+    found_segs_tensor = shapes_to_segs(
+        drawn_shapes_data, image_display_top_figure, image_display_side_figure,
+    )
     # convert to a colored image
     fst_colored = image_utils.label_to_colors(
         found_segs_tensor,
@@ -659,12 +667,21 @@ def store_scene_data(graph_3d_relayoutData, last_3d_scene):
     [Output("image-display-graph-3d", "figure"), Output("last-render-id", "data")],
     [Input("dummy2", "children")],
     [
-        State("found-segs", "data"),
+        State("drawn-shapes", "data"),
         State("fig-3d-scene", "data"),
         State("last-render-id", "data"),
+        State("image-display-graph-top", "figure"),
+        State("image-display-graph-side", "figure"),
     ],
 )
-def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene, last_render_id):
+def populate_3d_graph(
+    dummy2_children,
+    drawn_shapes_data,
+    last_3d_scene,
+    last_render_id,
+    image_display_top_figure,
+    image_display_side_figure,
+):
     # extract which graph shown and the current render id
     graph_shown, current_render_id = dummy2_children.split(",")
     current_render_id = int(current_render_id)
@@ -678,10 +695,12 @@ def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene, last_rend
             print("not rendering 3D because it is up to date")
         return dash.no_update
     print("rendering 3D")
-    segs_ndarray = slice_image_list_to_ndarray(found_segs_data[0])
+    segs_ndarray = shapes_to_segs(
+        drawn_shapes_data, image_display_top_figure, image_display_side_figure,
+    ).transpose((1, 2, 0))
     # image, color
     images = [
-        (segs_ndarray[:, :, ::-1, :], "purple"),
+        (segs_ndarray[:, :, ::-1], "purple"),
         (img.transpose((1, 2, 0))[:, :, ::-1], "grey"),
     ]
     data = []
