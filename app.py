@@ -297,9 +297,7 @@ app.layout = html.Div(
                 dcc.Graph(
                     "image-display-graph-3d",
                     figure=make_default_3d_fig(),
-                    config=dict(
-                        displayModeBar=False,
-                    ),
+                    config=dict(displayModeBar=False,),
                 )
             ],
             style={"display": "none"},
@@ -664,11 +662,15 @@ def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
     data = []
     for im, color in images:
         im = image_utils.combine_last_dim(im)
-        print("im.shape", im.shape)
-        verts, faces, normals, values = measure.marching_cubes(im, 0, step_size=3)
-        x, y, z = verts.T
-        i, j, k = faces.T
-        data.append(go.Mesh3d(x=x, y=y, z=z, color=color, opacity=0.5, i=i, j=j, k=k))
+        try:
+            verts, faces, normals, values = measure.marching_cubes(im, 0, step_size=3)
+            x, y, z = verts.T
+            i, j, k = faces.T
+            data.append(
+                go.Mesh3d(x=x, y=y, z=z, color=color, opacity=0.5, i=i, j=j, k=k)
+            )
+        except RuntimeError:
+            continue
     fig = go.Figure(data=data)
     fig.update_layout(**last_3d_scene)
     end_time = time.time()
