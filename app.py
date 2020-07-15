@@ -174,21 +174,25 @@ top_fig, side_fig = [
     for i in range(NUM_DIMS_DISPLAYED)
 ]
 
+default_3d_layout = dict(
+    scene_camera=dict(
+        up=dict(x=0, y=0, z=1),
+        center=dict(x=0, y=0, z=0),
+        eye=dict(x=1.25, y=1.25, z=1.25),
+    ),
+    height=800,
+)
+
 
 def make_default_3d_fig():
     fig = go.Figure(data=[go.Mesh3d()])
-    fig.update_layout(
-        scene_camera=dict(
-            up=dict(x=0, y=0, z=1),
-            center=dict(x=0, y=0, z=0),
-            eye=dict(x=1.25, y=1.25, z=1.25),
-        )
-    )
+    fig.update_layout(**default_3d_layout)
     return fig
 
 
 app.layout = html.Div(
-    [
+    id="main",
+    children=[
         dcc.Store(id="image-slices", data=img_slices),
         dcc.Store(id="seg-slices", data=seg_slices),
         dcc.Store(
@@ -290,23 +294,18 @@ app.layout = html.Div(
         html.Div(
             id="3D-graphs",
             children=[
-                dcc.Graph("image-display-graph-3d", figure=make_default_3d_fig())
-            ],
-            style={"display": "none"}
-        ),
-        dcc.Store(
-            id="fig-3d-scene",
-            data=dict(
-                scene=dict(
-                    camera=dict(
-                        up=dict(x=0, y=0, z=1),
-                        center=dict(x=0, y=0, z=0),
-                        eye=dict(x=1.25, y=1.25, z=1.25),
-                    )
+                dcc.Graph(
+                    "image-display-graph-3d",
+                    figure=make_default_3d_fig(),
+                    config=dict(
+                        displayModeBar=False,
+                    ),
                 )
-            ),
+            ],
+            style={"display": "none"},
         ),
-    ]
+        dcc.Store(id="fig-3d-scene", data=default_3d_layout,),
+    ],
 )
 
 app.clientside_callback(
@@ -608,7 +607,7 @@ function (show_hide_check_value) {
     console.log(show_hide_check_value);
     var graphs_2d = document.getElementById("2D-graphs"),
         graphs_3d = document.getElementById("3D-graphs");
-    if (graphs_2d) {
+    if (graphs_2d && graphs_3d) {
         if (show_hide_check_value[0] === "show") {
             graphs_2d.style.display = "none";
             graphs_3d.style.display = "";
@@ -628,11 +627,16 @@ function (show_hide_check_value) {
 
 # This could in theory be clientside but let's try our luck with serverside
 @app.callback(
-    Output("fig-3d-scene", "data"), [Input("image-display-graph-3d", "relayoutData")]
+    Output("fig-3d-scene", "data"),
+    [Input("image-display-graph-3d", "relayoutData")],
+    [State("fig-3d-scene", "data")],
 )
-def store_scene_data(graph_3d_relayoutData):
-    if graph_3d_relayoutData is not None and ("scene.camera" in graph_3d_relayoutData):
-        return graph_3d_relayoutData
+def store_scene_data(graph_3d_relayoutData, last_3d_scene):
+    print("graph_3d_relayoutData", graph_3d_relayoutData)
+    if graph_3d_relayoutData is not None:
+        for k in graph_3d_relayoutData.keys():
+            last_3d_scene[k] = graph_3d_relayoutData[k]
+        return last_3d_scene
     return dash.no_update
 
 
@@ -642,7 +646,13 @@ def store_scene_data(graph_3d_relayoutData):
     [State("found-segs", "data"), State("fig-3d-scene", "data")],
 )
 def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
-    start_time=time.time()
+    # TODO: Maybe a way to pass a "hash" of what is being shown, which is
+    # updated when the 2d figures have shapes added. Then when this callback is
+    # run, it checks the number and if its own number is different, it draws the
+    # 3D anew, and sets its number to the same as the "hash". This is so that
+    # next time, if show/hide is toggled, but the "hash" is the same as what was
+    # shown last time, it won't draw anything, saving time.
+    start_time = time.time()
     if dummy2_children != "3d shown":
         return dash.no_update
     segs_ndarray = slice_image_list_to_ndarray(found_segs_data[0])
@@ -655,15 +665,15 @@ def populate_3d_graph(dummy2_children, found_segs_data, last_3d_scene):
     for im, color in images:
         im = image_utils.combine_last_dim(im)
         print("im.shape", im.shape)
-        verts, faces, normals, values = measure.marching_cubes(im, 0)
+        verts, faces, normals, values = measure.marching_cubes(im, 0, step_size=3)
         x, y, z = verts.T
         i, j, k = faces.T
         data.append(go.Mesh3d(x=x, y=y, z=z, color=color, opacity=0.5, i=i, j=j, k=k))
     fig = go.Figure(data=data)
     fig.update_layout(**last_3d_scene)
-    end_time=time.time()
-    print('serverside 3D generation took: %f seconds' % (end_time - start_time,))
-    #fig.write_json('/tmp/fig.json')
+    end_time = time.time()
+    print("serverside 3D generation took: %f seconds" % (end_time - start_time,))
+    # fig.write_json('/tmp/fig.json')
     return fig
 
 
