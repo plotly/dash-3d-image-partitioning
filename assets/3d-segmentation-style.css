@@ -1,3 +1,11 @@
 #loader-wrapper > div {
     visibility: visible !important;
 }
+
+#view-select-tabs, #view-select-tabs-parent {
+    display: inline-flex !important;
+}
+
+#view-select-tabs div {
+    box-sizing:unset;
+}

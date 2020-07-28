@@ -233,29 +233,15 @@ app.layout = html.Div(
         # base64-encoded data between client and server: we let the browser
         # handle how data from the browser can be written to the client's
         # filesystem.
-        html.Button("Download found partition", id="download-button"),
-        html.A(id="download-link", download="found_image.nii",),
-        # required so callback triggered by writing to "found-image-tensor-data"
-        # has an output
-        html.Div(id="dummy", style={"display": "none"}),
-        html.Div(id="dummy2", style={"display": "none"}, children=",0"),
-        html.Div(
-            children=[
-                dcc.Checklist(
-                    id="show-seg-check",
-                    options=[{"label": "Show segmentation", "value": "show"},],
-                    value=["show"],
-                ),
-                html.Button("Undo", id="undo-button", n_clicks=0),
-                html.Button("Redo", id="redo-button", n_clicks=0),
-            ]
-        ),
         html.Div(
             id="loader-wrapper",
             children=[
-                dcc.Loading(
-                    id="graph-loading",
-                    type="circle",
+                html.A(id="download-link", download="found_image.nii",),
+                # required so callback triggered by writing to "found-image-tensor-data"
+                # has an output
+                html.Div(id="dummy", style={"display": "none"}),
+                html.Div(id="dummy2", style={"display": "none"}, children=",0"),
+                html.Div(
                     children=[
                         dcc.Tabs(
                             id="view-select-tabs",
@@ -265,6 +251,27 @@ app.layout = html.Div(
                                 dcc.Tab(label="Show in 3D", value="show"),
                             ],
                         ),
+                        html.Div(
+                            children=[
+                                html.Button("Undo", id="undo-button", n_clicks=0),
+                                html.Button("Redo", id="redo-button", n_clicks=0),
+                                html.Button(
+                                    "Hide Segmentation",
+                                    id="show-seg-check",
+                                    n_clicks=0,
+                                ),
+                                html.Button(
+                                    "Download found partition", id="download-button"
+                                ),
+                            ],
+                            style={"float": "right"},
+                        ),
+                    ]
+                ),
+                dcc.Loading(
+                    id="graph-loading",
+                    type="circle",
+                    children=[
                         html.Div(
                             id="2D-graphs",
                             children=[
@@ -319,7 +326,7 @@ app.layout = html.Div(
                             style={"display": "none"},
                         ),
                     ],
-                )
+                ),
             ],
         ),
         dcc.Store(id="fig-3d-scene", data=default_3d_layout,),
@@ -333,13 +340,14 @@ app.clientside_callback(
 function(
     image_select_top_value,
     image_select_side_value,
-    show_seg_check,
+    show_seg_n_clicks,
     found_segs_data,
     image_slices_data,
     image_display_top_figure,
     image_display_side_figure,
     seg_slices_data,
     drawn_shapes_data) {
+    var show_seg_check = (show_seg_n_clicks % 2) ? "" : "show";
     let image_display_figures_ = figure_display_update(
         [image_select_top_value,image_select_side_value],
         show_seg_check,
@@ -371,6 +379,14 @@ function(
         tri_shape(sizex-d/2,sizey*image_select_top_value/found_segs_data[0].length,
                   d/2,d/2,'left'),
     ]);
+    // update show segmentation button
+    var show_seg_button = document.getElementById("show-seg-check");
+    if (show_seg_button) {
+        show_seg_button.textContent = show_seg_n_clicks % 2 ?
+            "Show Segmentation" :
+            "Hide Segmentation";
+    }
+    // return the outputs
     return image_display_figures_.concat(["Top image slice: " + image_select_top_value,
                                           "Side image slice: " + image_select_side_value,
                                           image_select_top_value,
@@ -389,7 +405,7 @@ function(
     [
         Input("image-select-top", "value"),
         Input("image-select-side", "value"),
-        Input("show-seg-check", "value"),
+        Input("show-seg-check", "n_clicks"),
         Input("found-segs", "data"),
     ],
     [
@@ -642,14 +658,14 @@ function (href) {
 
 app.clientside_callback(
     """
-function (show_hide_check_value,current_render_id) {
-    console.log("show_hide_check_value");
-    console.log(show_hide_check_value);
+function (view_select_tabs_value,current_render_id) {
+    console.log("view_select_tabs_value");
+    console.log(view_select_tabs_value);
     var graphs_2d = document.getElementById("2D-graphs"),
         graphs_3d = document.getElementById("3D-graphs"),
         ret = "";
     if (graphs_2d && graphs_3d) {
-        if (show_hide_check_value === "show") {
+        if (view_select_tabs_value === "show") {
             graphs_2d.style.display = "none";
             graphs_3d.style.display = "";
             ret = "3d shown";
