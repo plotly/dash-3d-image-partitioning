@@ -219,8 +219,6 @@ app.layout = html.Div(
                 ],
             ),
         ),
-        # the image data of the found segmentation is stored here before it is downloaded
-        dcc.Store(id="found-image-tensor-data", data=""),
         # In this implementation we want to prevent needless passing of the
         # large image array from client to server, so when "downloaded-button"
         # is clicked, the contents of the "found-segs" store is converted to nii
@@ -236,50 +234,76 @@ app.layout = html.Div(
         html.Div(
             id="loader-wrapper",
             children=[
-                html.A(id="download-link", download="found_image.nii",),
                 # required so callback triggered by writing to "found-image-tensor-data"
                 # has an output
                 html.Div(id="dummy", style={"display": "none"}),
                 html.Div(id="dummy2", style={"display": "none"}, children=",0"),
-                html.Div(
-                    children=[
-                        dcc.Tabs(
-                            id="view-select-tabs",
-                            value="",
-                            children=[
-                                dcc.Tab(label="Show in 2D", value=""),
-                                dcc.Tab(label="Show in 3D", value="show"),
-                            ],
-                        ),
-                        html.Div(
-                            children=[
-                                html.Button("Undo", id="undo-button", n_clicks=0),
-                                html.Button("Redo", id="redo-button", n_clicks=0),
-                                html.Button(
-                                    "Hide Segmentation",
-                                    id="show-seg-check",
-                                    n_clicks=0,
-                                ),
-                                html.Button(
-                                    "Download found partition", id="download-button"
-                                ),
-                            ],
-                            style={"float": "right"},
-                        ),
-                    ]
-                ),
                 dcc.Loading(
                     id="graph-loading",
                     type="circle",
                     children=[
+                        html.A(id="download-link", download="found_image.nii",),
+                        # the image data of the found segmentation is stored
+                        # here before it is downloaded
+                        dcc.Store(id="found-image-tensor-data", data=""),
                         html.Div(
-                            id="2D-graphs",
                             children=[
+                                dcc.Tabs(
+                                    id="view-select-tabs",
+                                    value="",
+                                    children=[
+                                        dcc.Tab(label="Show in 2D", value=""),
+                                        dcc.Tab(label="Show in 3D", value="show"),
+                                    ],
+                                ),
                                 html.Div(
                                     children=[
+                                        html.Button(
+                                            "Undo", id="undo-button", n_clicks=0
+                                        ),
+                                        html.Button(
+                                            "Redo", id="redo-button", n_clicks=0
+                                        ),
+                                        html.Button(
+                                            "Hide Segmentation",
+                                            id="show-seg-check",
+                                            n_clicks=0,
+                                        ),
+                                        html.Button(
+                                            "Download Selected Partitions",
+                                            id="download-button",
+                                        ),
+                                    ],
+                                    style={"float": "right"},
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            id="2D-graphs",
+                            style={
+                                "display": "grid",
+                                "grid-template-columns": "repeat(2,1fr)",
+                                "grid-auto-rows": "auto",
+                            },
+                            children=[
+                                html.Div(
+                                    [
+                                        html.H4(
+                                            "Top View", style={"text-align": "center"}
+                                        )
+                                    ],
+                                    style={"grid-column": "1", "grid-row": "1"},
+                                ),
+                                html.Div(
+                                    [
                                         dcc.Graph(
                                             id="image-display-graph-top", figure=top_fig
-                                        ),
+                                        )
+                                    ],
+                                    style={"grid-column": "1", "grid-row": "2"},
+                                ),
+                                html.Div(
+                                    [
                                         html.Div(id="image-select-top-display"),
                                         dcc.Slider(
                                             id="image-select-top",
@@ -290,14 +314,27 @@ app.layout = html.Div(
                                             value=len(img_slices[0]) // 2,
                                         ),
                                     ],
-                                    style={"width": "45%", "display": "inline-block"},
+                                    style={"grid-column": "1", "grid-row": "3"},
                                 ),
                                 html.Div(
-                                    children=[
+                                    [
+                                        html.H4(
+                                            "Side View", style={"text-align": "center"}
+                                        )
+                                    ],
+                                    style={"grid-column": "2", "grid-row": "1"},
+                                ),
+                                html.Div(
+                                    [
                                         dcc.Graph(
                                             id="image-display-graph-side",
                                             figure=side_fig,
-                                        ),
+                                        )
+                                    ],
+                                    style={"grid-column": "2", "grid-row": "2"},
+                                ),
+                                html.Div(
+                                    [
                                         html.Div(id="image-select-side-display"),
                                         dcc.Slider(
                                             id="image-select-side",
@@ -308,7 +345,7 @@ app.layout = html.Div(
                                             value=len(img_slices[1]) // 2,
                                         ),
                                     ],
-                                    style={"width": "45%", "display": "inline-block"},
+                                    style={"grid-column": "2", "grid-row": "3"},
                                 ),
                                 # This store has to be put here so dcc.Loading sees that it is updating.
                                 dcc.Store(id="found-segs", data=found_seg_slices),
@@ -670,7 +707,7 @@ function (view_select_tabs_value,current_render_id) {
             graphs_3d.style.display = "";
             ret = "3d shown";
         } else {
-            graphs_2d.style.display = "";
+            graphs_2d.style.display = "grid";
             graphs_3d.style.display = "none";
             ret = "2d shown";
         }
