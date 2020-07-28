@@ -250,68 +250,76 @@ app.layout = html.Div(
                 html.Button("Redo", id="redo-button", n_clicks=0),
             ]
         ),
-        dcc.Tabs(
-            id="view-select-tabs",
-            value="",
+        html.Div(
+            id="loader-wrapper",
             children=[
-                dcc.Tab(label="Show in 2D", value=""),
-                dcc.Tab(label="Show in 3D", value="show"),
-            ],
-        ),
-        dcc.Loading(
-            id="graph-loading",
-            type="circle",
-            children=[
-                html.Div(
-                    id="2D-graphs",
+                dcc.Loading(
+                    id="graph-loading",
+                    type="circle",
                     children=[
-                        html.Div(
+                        dcc.Tabs(
+                            id="view-select-tabs",
+                            value="",
                             children=[
-                                dcc.Graph(id="image-display-graph-top", figure=top_fig),
-                                html.Div(id="image-select-top-display"),
-                                dcc.Slider(
-                                    id="image-select-top",
-                                    min=0,
-                                    max=len(img_slices[0]),
-                                    step=1,
-                                    updatemode="drag",
-                                    value=len(img_slices[0]) // 2,
-                                ),
+                                dcc.Tab(label="Show in 2D", value=""),
+                                dcc.Tab(label="Show in 3D", value="show"),
                             ],
-                            style={"width": "45%", "display": "inline-block"},
                         ),
                         html.Div(
+                            id="2D-graphs",
+                            children=[
+                                html.Div(
+                                    children=[
+                                        dcc.Graph(
+                                            id="image-display-graph-top", figure=top_fig
+                                        ),
+                                        html.Div(id="image-select-top-display"),
+                                        dcc.Slider(
+                                            id="image-select-top",
+                                            min=0,
+                                            max=len(img_slices[0]),
+                                            step=1,
+                                            updatemode="drag",
+                                            value=len(img_slices[0]) // 2,
+                                        ),
+                                    ],
+                                    style={"width": "45%", "display": "inline-block"},
+                                ),
+                                html.Div(
+                                    children=[
+                                        dcc.Graph(
+                                            id="image-display-graph-side",
+                                            figure=side_fig,
+                                        ),
+                                        html.Div(id="image-select-side-display"),
+                                        dcc.Slider(
+                                            id="image-select-side",
+                                            min=0,
+                                            max=len(img_slices[1]),
+                                            step=1,
+                                            updatemode="drag",
+                                            value=len(img_slices[1]) // 2,
+                                        ),
+                                    ],
+                                    style={"width": "45%", "display": "inline-block"},
+                                ),
+                                # This store has to be put here so dcc.Loading sees that it is updating.
+                                dcc.Store(id="found-segs", data=found_seg_slices),
+                            ],
+                        ),
+                        html.Div(
+                            id="3D-graphs",
                             children=[
                                 dcc.Graph(
-                                    id="image-display-graph-side", figure=side_fig
-                                ),
-                                html.Div(id="image-select-side-display"),
-                                dcc.Slider(
-                                    id="image-select-side",
-                                    min=0,
-                                    max=len(img_slices[1]),
-                                    step=1,
-                                    updatemode="drag",
-                                    value=len(img_slices[1]) // 2,
-                                ),
+                                    "image-display-graph-3d",
+                                    figure=make_default_3d_fig(),
+                                    config=dict(displayModeBar=False,),
+                                )
                             ],
-                            style={"width": "45%", "display": "inline-block"},
+                            style={"display": "none"},
                         ),
-                        # This store has to be put here so dcc.Loading sees that it is updating.
-                        dcc.Store(id="found-segs", data=found_seg_slices),
                     ],
-                ),
-                html.Div(
-                    id="3D-graphs",
-                    children=[
-                        dcc.Graph(
-                            "image-display-graph-3d",
-                            figure=make_default_3d_fig(),
-                            config=dict(displayModeBar=False,),
-                        )
-                    ],
-                    style={"display": "none"},
-                ),
+                )
             ],
         ),
         dcc.Store(id="fig-3d-scene", data=default_3d_layout,),
