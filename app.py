@@ -250,10 +250,13 @@ app.layout = html.Div(
                 html.Button("Redo", id="redo-button", n_clicks=0),
             ]
         ),
-        dcc.Checklist(
-            id="show-hide-check",
-            options=[{"label": "Show in 3D", "value": "show"},],
-            value=[],
+        dcc.Tabs(
+            id="view-select-tabs",
+            value="",
+            children=[
+                dcc.Tab(label="Show in 2D", value=""),
+                dcc.Tab(label="Show in 3D", value="show"),
+            ],
         ),
         dcc.Loading(
             id="graph-loading",
@@ -638,7 +641,7 @@ function (show_hide_check_value,current_render_id) {
         graphs_3d = document.getElementById("3D-graphs"),
         ret = "";
     if (graphs_2d && graphs_3d) {
-        if (show_hide_check_value[0] === "show") {
+        if (show_hide_check_value === "show") {
             graphs_2d.style.display = "none";
             graphs_3d.style.display = "";
             ret = "3d shown";
@@ -653,7 +656,7 @@ function (show_hide_check_value,current_render_id) {
 }
 """,
     Output("dummy2", "children"),
-    [Input("show-hide-check", "value")],
+    [Input("view-select-tabs", "value")],
     [State("current-render-id", "data")],
 )
 
