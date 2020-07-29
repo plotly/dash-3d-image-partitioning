@@ -284,6 +284,7 @@ app.layout = html.Div(
                                 "display": "grid",
                                 "grid-template-columns": "repeat(2,1fr)",
                                 "grid-auto-rows": "auto",
+                                "grid-gap": "1em",
                             },
                             children=[
                                 html.Div(
@@ -297,14 +298,17 @@ app.layout = html.Div(
                                 html.Div(
                                     [
                                         dcc.Graph(
-                                            id="image-display-graph-top", figure=top_fig
+                                            id="image-display-graph-top", figure=top_fig,
                                         )
                                     ],
                                     style={"grid-column": "1", "grid-row": "2"},
                                 ),
                                 html.Div(
                                     [
-                                        html.Div(id="image-select-top-display"),
+                                        html.Div(id="image-select-top-display",
+                                            style={
+                                                "width": "125px"
+                                            }),
                                         html.Div(
                                             dcc.Slider(
                                                 id="image-select-top",
@@ -321,6 +325,7 @@ app.layout = html.Div(
                                         "grid-column": "1",
                                         "grid-row": "3",
                                         "display": "flex",
+                                        "background": "grey"
                                     },
                                 ),
                                 html.Div(
@@ -342,29 +347,29 @@ app.layout = html.Div(
                                 ),
                                 html.Div(
                                     [
-                                        html.Div(id="image-select-side-display"),
-                                        html.Div(
-                                            dcc.Slider(
-                                                id="image-select-side",
-                                                min=0,
-                                                max=len(img_slices[1]) - 1,
-                                                step=1,
-                                                updatemode="drag",
-                                                value=len(img_slices[1]) // 2,
-                                            ),
+                                        html.Div(id="image-select-side-display",
                                             style={
-                                                # TODO center slider vertically
-                                                "flex-grow": "1",
-                                                "position": "relative",
-                                                "top": "50%",
-                                                "transform": "translate(0,-50%)",
-                                            },
+                                                "width": "125px"
+                                            }),
+                                        html.Div(
+                                            [
+                                                dcc.Slider(
+                                                    id="image-select-side",
+                                                    min=0,
+                                                    max=len(img_slices[1]) - 1,
+                                                    step=1,
+                                                    updatemode="drag",
+                                                    value=len(img_slices[1]) // 2,
+                                                )
+                                            ],
+                                            style={"flex-grow": "1"}
                                         ),
                                     ],
                                     style={
                                         "grid-column": "2",
                                         "grid-row": "3",
                                         "display": "flex",
+                                        "background": "grey"
                                     },
                                 ),
                                 # This store has to be put here so dcc.Loading sees that it is updating.
@@ -403,7 +408,7 @@ function(
     image_display_top_figure,
     image_display_side_figure,
     seg_slices_data,
-    drawn_shapes_data) {
+    drawn_shapes_data) {{
     var show_seg_check = (show_seg_n_clicks % 2) ? "" : "show";
     let image_display_figures_ = figure_display_update(
         [image_select_top_value,image_select_side_value],
@@ -422,39 +427,40 @@ function(
     // append shapes that show what slice the other figure is in
     sizex = top_figure.layout.images[0].sizex,
     sizey = top_figure.layout.images[0].sizey;
-    if (top_figure.layout.shapes) {
+    if (top_figure.layout.shapes) {{
         top_figure.layout.shapes=top_figure.layout.shapes.concat([
             tri_shape(d/2,sizey*image_select_side_value/found_segs_data[1].length,
                       d/2,d/2,'right'),
             tri_shape(sizex-d/2,sizey*image_select_side_value/found_segs_data[1].length,
                       d/2,d/2,'left'),
         ]);
-    }
+    }}
     sizex = side_figure.layout.images[0].sizex,
     sizey = side_figure.layout.images[0].sizey;
-    if (side_figure.layout.shapes) {
+    if (side_figure.layout.shapes) {{
         side_figure.layout.shapes=side_figure.layout.shapes.concat([
             tri_shape(d/2,sizey*image_select_top_value/found_segs_data[0].length,
                       d/2,d/2,'right'),
             tri_shape(sizex-d/2,sizey*image_select_top_value/found_segs_data[0].length,
                       d/2,d/2,'left'),
         ]);
-    }
+    }}
     // update show segmentation button
     var show_seg_button = document.getElementById("show-seg-check");
-    if (show_seg_button) {
+    if (show_seg_button) {{
         show_seg_button.textContent = show_seg_n_clicks % 2 ?
             "Show Segmentation" :
             "Hide Segmentation";
-    }
+    }}
     // return the outputs
-    return image_display_figures_.concat(["Top image slice: " + image_select_top_value,
-                                          "Side image slice: " + image_select_side_value,
-                                          image_select_top_value,
-                                          image_select_side_value
-                                          ]);
-}
-""",
+    return image_display_figures_.concat([
+    "Slice: " + (image_select_top_value+1) + " / {num_top_slices}",
+    "Slice: " + (image_select_side_value+1) + " / {num_side_slices}",
+    image_select_top_value,
+    image_select_side_value
+    ]);
+}}
+""".format(num_top_slices=len(img_slices[0]),num_side_slices=len(img_slices[1])),
     [
         Output("image-display-graph-top", "figure"),
         Output("image-display-graph-side", "figure"),
