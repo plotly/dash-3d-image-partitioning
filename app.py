@@ -245,6 +245,13 @@ app.layout = html.Div(
                 # has an output
                 html.Div(id="dummy", style={"display": "none"}),
                 html.Div(id="dummy2", style={"display": "none"}, children=",0"),
+                # hidden elements so we can show/hide segmentations on 2d and 3d figures
+                html.Div(
+                    id="show-hide-seg-2d", children="show", style={"display": "none"}
+                ),
+                html.Div(
+                    id="show-hide-seg-3d", children="show", style={"display": "none"}
+                ),
                 dcc.Loading(
                     id="graph-loading",
                     type="circle",
@@ -423,17 +430,35 @@ app.layout = html.Div(
 
 app.clientside_callback(
     """
+function (show_seg_n_clicks) {
+    // update show segmentation button
+    var show_seg_button = document.getElementById("show-seg-check");
+    if (show_seg_button) {
+        show_seg_button.textContent = show_seg_n_clicks % 2 ?
+            "Show Segmentation" :
+            "Hide Segmentation";
+    }
+    var ret = (show_seg_n_clicks % 2) ? "" : "show";
+    return [ret,ret];
+}
+""",
+    [Output("show-hide-seg-2d", "children"), Output("show-hide-seg-3d", "children")],
+    [Input("show-seg-check", "n_clicks")],
+)
+
+app.clientside_callback(
+    """
 function(
     image_select_top_value,
     image_select_side_value,
-    show_seg_n_clicks,
+    show_hide_seg_2d,
     found_segs_data,
     image_slices_data,
     image_display_top_figure,
     image_display_side_figure,
     seg_slices_data,
     drawn_shapes_data) {{
-    var show_seg_check = (show_seg_n_clicks % 2) ? "" : "show";
+    let show_seg_check = show_hide_seg_2d;
     let image_display_figures_ = figure_display_update(
         [image_select_top_value,image_select_side_value],
         show_seg_check,
@@ -469,13 +494,6 @@ function(
                       d/2,d/2,'left'),
         ]);
     }}
-    // update show segmentation button
-    var show_seg_button = document.getElementById("show-seg-check");
-    if (show_seg_button) {{
-        show_seg_button.textContent = show_seg_n_clicks % 2 ?
-            "Show Segmentation" :
-            "Hide Segmentation";
-    }}
     // return the outputs
     return image_display_figures_.concat([
     "Slice: " + (image_select_top_value+1) + " / {num_top_slices}",
@@ -498,7 +516,7 @@ function(
     [
         Input("image-select-top", "value"),
         Input("image-select-side", "value"),
-        Input("show-seg-check", "n_clicks"),
+        Input("show-hide-seg-2d", "children"),
         Input("found-segs", "data"),
     ],
     [
@@ -794,7 +812,7 @@ def store_scene_data(graph_3d_relayoutData, last_3d_scene):
 
 @app.callback(
     [Output("image-display-graph-3d", "figure"), Output("last-render-id", "data")],
-    [Input("dummy2", "children")],
+    [Input("dummy2", "children"), Input("show-hide-seg-3d", "children")],
     [
         State("drawn-shapes", "data"),
         State("fig-3d-scene", "data"),
@@ -805,6 +823,7 @@ def store_scene_data(graph_3d_relayoutData, last_3d_scene):
 )
 def populate_3d_graph(
     dummy2_children,
+    show_hide_seg_3d,
     drawn_shapes_data,
     last_3d_scene,
     last_render_id,
@@ -815,23 +834,27 @@ def populate_3d_graph(
     graph_shown, current_render_id = dummy2_children.split(",")
     current_render_id = int(current_render_id)
     start_time = time.time()
-    print(
-        "might render 3D, current_id: %d, last_id: %d"
-        % (current_render_id, last_render_id)
-    )
-    if graph_shown != "3d shown" or current_render_id == last_render_id:
-        if current_render_id == last_render_id:
-            print("not rendering 3D because it is up to date")
-        return dash.no_update
+    cbcontext = [p["prop_id"] for p in dash.callback_context.triggered][0]
+    # check that we're not toggling the display of the 3D annotation
+    if cbcontext != "show-hide-seg-3d.children":
+        print(
+            "might render 3D, current_id: %d, last_id: %d"
+            % (current_render_id, last_render_id)
+        )
+        if graph_shown != "3d shown" or current_render_id == last_render_id:
+            if current_render_id == last_render_id:
+                print("not rendering 3D because it is up to date")
+            return dash.no_update
     print("rendering 3D")
     segs_ndarray = shapes_to_segs(
         drawn_shapes_data, image_display_top_figure, image_display_side_figure,
     ).transpose((1, 2, 0))
     # image, color
     images = [
-        (segs_ndarray[:, :, ::-1], "purple"),
         (img.transpose((1, 2, 0))[:, :, ::-1], "grey"),
     ]
+    if show_hide_seg_3d == "show":
+        images.append((segs_ndarray[:, :, ::-1], "purple"))
     data = []
     for im, color in images:
         im = image_utils.combine_last_dim(im)
