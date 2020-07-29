@@ -262,13 +262,8 @@ app.layout = html.Div(
                         dcc.Store(id="found-image-tensor-data", data=""),
                         html.Div(
                             children=[
-                                dcc.Tabs(
-                                    id="view-select-tabs",
-                                    value="",
-                                    children=[
-                                        dcc.Tab(label="Show in 2D", value=""),
-                                        dcc.Tab(label="Show in 3D", value="show"),
-                                    ],
+                                html.Button(
+                                    "3D View", id="view-select-button", n_clicks=0
                                 ),
                                 html.Div(
                                     children=[
@@ -778,14 +773,21 @@ function (href) {
 
 app.clientside_callback(
     """
-function (view_select_tabs_value,current_render_id) {
-    console.log("view_select_tabs_value");
-    console.log(view_select_tabs_value);
+function (view_select_button_nclicks,current_render_id) {
+    console.log("view_select_button_nclicks");
+    console.log(view_select_button_nclicks);
     var graphs_2d = document.getElementById("2D-graphs"),
         graphs_3d = document.getElementById("3D-graphs"),
         ret = "";
+    // update view select button
+    var view_select_button = document.getElementById("view-select-button");
+    if (view_select_button) {
+        view_select_button.textContent = view_select_button_nclicks % 2 ?
+            "2D View" :
+            "3D View";
+    }
     if (graphs_2d && graphs_3d) {
-        if (view_select_tabs_value === "show") {
+        if (view_select_button_nclicks % 2) {
             graphs_2d.style.display = "none";
             graphs_3d.style.display = "";
             ret = "3d shown";
@@ -800,7 +802,7 @@ function (view_select_tabs_value,current_render_id) {
 }
 """,
     Output("dummy2", "children"),
-    [Input("view-select-tabs", "value")],
+    [Input("view-select-button", "n_clicks")],
     [State("current-render-id", "data")],
 )
 
