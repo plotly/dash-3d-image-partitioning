@@ -33,6 +33,7 @@ hwscales = [(2, 2), (2, 2)]
 NUM_DIMS_DISPLAYED = 2  # top and side
 # the color of the triangles displaying the slice number
 INDICATOR_COLOR = "DarkOrange"
+DISPLAY_BG_COLOR = "darkgrey"
 
 # A string, if length non-zero, saves superpixels to this file and then exits
 SAVE_SUPERPIXEL = get_env("SAVE_SUPERPIXEL", default="")
@@ -97,6 +98,7 @@ def make_default_figure(
             "newshape.line.color": stroke_color,
             "newshape.line.width": stroke_width,
             "margin": dict(l=0, r=0, b=0, t=0, pad=4),
+            "plot_bgcolor": DISPLAY_BG_COLOR,
         }
     )
     return fig
@@ -175,10 +177,15 @@ top_fig, side_fig = [
 ]
 
 default_3d_layout = dict(
-    scene_camera=dict(
-        up=dict(x=0, y=0, z=1),
-        center=dict(x=0, y=0, z=0),
-        eye=dict(x=1.25, y=1.25, z=1.25),
+    scene=dict(
+        yaxis=dict(visible=False, showticklabels=False, showgrid=False, ticks=""),
+        xaxis=dict(visible=True, title="Side View Slice Number"),
+        zaxis=dict(visible=True, title="Top View Slice Number"),
+        camera=dict(
+            up=dict(x=0, y=0, z=1),
+            center=dict(x=0, y=0, z=0),
+            eye=dict(x=1.25, y=1.25, z=1.25),
+        ),
     ),
     height=800,
 )
@@ -284,31 +291,40 @@ app.layout = html.Div(
                                 "display": "grid",
                                 "grid-template-columns": "repeat(2,1fr)",
                                 "grid-auto-rows": "auto",
-                                "grid-gap": "1em",
+                                "grid-gap": "0 1em",
                             },
                             children=[
                                 html.Div(
                                     [
-                                        html.H4(
-                                            "Top View", style={"text-align": "center"}
+                                        html.H6(
+                                            "Top View", style={"text-align": "center",}
                                         )
                                     ],
-                                    style={"grid-column": "1", "grid-row": "1"},
+                                    style={
+                                        "grid-column": "1",
+                                        "grid-row": "1",
+                                        "background-color": DISPLAY_BG_COLOR,
+                                    },
                                 ),
                                 html.Div(
                                     [
                                         dcc.Graph(
-                                            id="image-display-graph-top", figure=top_fig,
+                                            id="image-display-graph-top",
+                                            figure=top_fig,
                                         )
                                     ],
-                                    style={"grid-column": "1", "grid-row": "2"},
+                                    style={
+                                        "grid-column": "1",
+                                        "grid-row": "2",
+                                        "background-color": DISPLAY_BG_COLOR,
+                                    },
                                 ),
                                 html.Div(
                                     [
-                                        html.Div(id="image-select-top-display",
-                                            style={
-                                                "width": "125px"
-                                            }),
+                                        html.Div(
+                                            id="image-select-top-display",
+                                            style={"width": "125px"},
+                                        ),
                                         html.Div(
                                             dcc.Slider(
                                                 id="image-select-top",
@@ -325,16 +341,20 @@ app.layout = html.Div(
                                         "grid-column": "1",
                                         "grid-row": "3",
                                         "display": "flex",
-                                        "background": "grey"
+                                        "background": "grey",
                                     },
                                 ),
                                 html.Div(
                                     [
-                                        html.H4(
+                                        html.H6(
                                             "Side View", style={"text-align": "center"}
                                         )
                                     ],
-                                    style={"grid-column": "2", "grid-row": "1"},
+                                    style={
+                                        "grid-column": "2",
+                                        "grid-row": "1",
+                                        "background-color": DISPLAY_BG_COLOR,
+                                    },
                                 ),
                                 html.Div(
                                     [
@@ -343,14 +363,18 @@ app.layout = html.Div(
                                             figure=side_fig,
                                         )
                                     ],
-                                    style={"grid-column": "2", "grid-row": "2"},
+                                    style={
+                                        "grid-column": "2",
+                                        "grid-row": "2",
+                                        "background-color": DISPLAY_BG_COLOR,
+                                    },
                                 ),
                                 html.Div(
                                     [
-                                        html.Div(id="image-select-side-display",
-                                            style={
-                                                "width": "125px"
-                                            }),
+                                        html.Div(
+                                            id="image-select-side-display",
+                                            style={"width": "125px"},
+                                        ),
                                         html.Div(
                                             [
                                                 dcc.Slider(
@@ -362,14 +386,14 @@ app.layout = html.Div(
                                                     value=len(img_slices[1]) // 2,
                                                 )
                                             ],
-                                            style={"flex-grow": "1"}
+                                            style={"flex-grow": "1"},
                                         ),
                                     ],
                                     style={
                                         "grid-column": "2",
                                         "grid-row": "3",
                                         "display": "flex",
-                                        "background": "grey"
+                                        "background": "grey",
                                     },
                                 ),
                                 # This store has to be put here so dcc.Loading sees that it is updating.
@@ -460,7 +484,9 @@ function(
     image_select_side_value
     ]);
 }}
-""".format(num_top_slices=len(img_slices[0]),num_side_slices=len(img_slices[1])),
+""".format(
+        num_top_slices=len(img_slices[0]), num_side_slices=len(img_slices[1])
+    ),
     [
         Output("image-display-graph-top", "figure"),
         Output("image-display-graph-side", "figure"),
