@@ -653,16 +653,22 @@ def draw_shapes_react(
         ]
     ):
         return dash.no_update
+    t1 = time.time()
     found_segs_tensor = shapes_to_segs(
         drawn_shapes_data, image_display_top_figure, image_display_side_figure,
     )
+    t2 = time.time()
+    print("Time to convert shapes to segments:", t2 - t1)
     # convert to a colored image
     fst_colored = image_utils.label_to_colors(
         found_segs_tensor,
         colormap=["#000000", "#8A2BE2"],
         alpha=[0, 128],
         color_class_offset=0,
+        labels_contiguous=True,
     )
+    t3 = time.time()
+    print("Time to convert from labels to colored image:", t3 - t2)
     fstc_slices = [
         [
             array_to_data_url(np.moveaxis(fst_colored, 0, j)[i])
@@ -670,6 +676,9 @@ def draw_shapes_react(
         ]
         for j in range(NUM_DIMS_DISPLAYED)
     ]
+    t4 = time.time()
+    print("Time to convert to data URLs:", t4 - t3)
+    print("Total time to compute 2D annotations:", t4 - t1)
     return fstc_slices, current_render_id + 1
 
 
