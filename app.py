@@ -200,6 +200,27 @@ def make_default_3d_fig():
 app.layout = html.Div(
     id="main",
     children=[
+        # Banner display
+        html.Div(
+            id="banner",
+            children=[
+                html.Div(
+                    html.H1(
+                        "3D Image Annotation",
+                        id="title",
+                        style={"color": "#f9f9f9"},
+                    ),
+                    style={"flex":"5 1 0","position":"relative","top":""}
+
+                ),
+                html.Img(
+                    id="logo",
+                    src=app.get_asset_url("dash-logo-new.png"),
+                    style={"flex":"1 1 0","object-fit":"contain"},
+                ),
+            ],
+            style={"display": "flex","position":"relative","background":"yellow"},
+        ),
         dcc.Store(id="image-slices", data=img_slices),
         dcc.Store(id="seg-slices", data=seg_slices),
         dcc.Store(
