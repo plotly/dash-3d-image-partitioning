@@ -263,29 +263,36 @@ app.layout = html.Div(
                         html.Div(
                             children=[
                                 html.Button(
-                                    "3D View", id="view-select-button", n_clicks=0
+                                    "3D View",
+                                    id="view-select-button",
+                                    n_clicks=0,
+                                    style={"width": "25%"},
                                 ),
-                                html.Div(
-                                    children=[
-                                        html.Button(
-                                            "Undo", id="undo-button", n_clicks=0
-                                        ),
-                                        html.Button(
-                                            "Redo", id="redo-button", n_clicks=0
-                                        ),
-                                        html.Button(
-                                            "Hide Segmentation",
-                                            id="show-seg-check",
-                                            n_clicks=0,
-                                        ),
-                                        html.Button(
-                                            "Download Selected Partitions",
-                                            id="download-button",
-                                        ),
-                                    ],
-                                    style={"float": "right"},
+                                html.Button(
+                                    "Hide Segmentation",
+                                    id="show-seg-check",
+                                    n_clicks=0,
+                                    style={"width": "25%"},
                                 ),
-                            ]
+                                html.Button(
+                                    "Download Selected Partitions",
+                                    id="download-button",
+                                    style={"width": "25%"},
+                                ),
+                                html.Button(
+                                    "Undo",
+                                    id="undo-button",
+                                    n_clicks=0,
+                                    style={"width": "12.5%"},
+                                ),
+                                html.Button(
+                                    "Redo",
+                                    id="redo-button",
+                                    n_clicks=0,
+                                    style={"width": "12.5%"},
+                                ),
+                            ],
+                            style={"display": "flex", "margin": "2px 0 2px 0"},
                         ),
                         html.Div(
                             id="2D-graphs",
@@ -293,7 +300,7 @@ app.layout = html.Div(
                                 "display": "grid",
                                 "grid-template-columns": "repeat(2,1fr)",
                                 "grid-auto-rows": "auto",
-                                "grid-gap": "0 1em",
+                                "grid-gap": "0 2px",
                             },
                             children=[
                                 html.Div(
