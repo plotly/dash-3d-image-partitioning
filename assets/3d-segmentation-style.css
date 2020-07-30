@@ -11,17 +11,10 @@
 }
 
 #image-select-side,#image-select-top {
-    /* display: inline-block; */
-    /* width:50%; */
     padding: 0 10px 0 10px !important;
     position: relative;
     top: 50%;
     transform: translate(0,-50%);
-    /*
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    */
 }
 
 #image-select-side-display,#image-select-top-display {
@@ -33,3 +26,10 @@
 #main {
     background-color: black;
 }
+
+#title {
+}
+
+#logo {
+}
+

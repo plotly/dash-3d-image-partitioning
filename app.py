@@ -208,18 +208,30 @@ app.layout = html.Div(
                     html.H1(
                         "3D Image Annotation",
                         id="title",
-                        style={"color": "#f9f9f9"},
+                        style={
+                            "color": "#f9f9f9",
+                            "display": "inline-block",
+                            "margin": "0",
+                        },
                     ),
-                    style={"flex":"5 1 0","position":"relative","top":""}
-
+                    style={
+                        "flex": "5 1 0",
+                        "position": "relative",
+                        "align-items": "center",
+                        "display": "flex",
+                    },
                 ),
                 html.Img(
                     id="logo",
                     src=app.get_asset_url("dash-logo-new.png"),
-                    style={"flex":"1 1 0","object-fit":"contain"},
+                    style={"flex": "1 1 0", "object-fit": "contain"},
                 ),
             ],
-            style={"display": "flex","position":"relative","background":"yellow"},
+            style={
+                "display": "flex",
+                "position": "relative",
+                "margin": "10px 10px 10px 10px",
+            },
         ),
         dcc.Store(id="image-slices", data=img_slices),
         dcc.Store(id="seg-slices", data=seg_slices),
