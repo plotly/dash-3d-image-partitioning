@@ -697,10 +697,13 @@ def draw_shapes_react(
     # convert to a colored image
     fst_colored = image_utils.label_to_colors(
         found_segs_tensor,
-        colormap=["#000000", "#8A2BE2"],
-        alpha=[0, 128],
-        color_class_offset=0,
+        colormap=["#8A2BE2"],
+        alpha=[128],
+        # we map label 0 to the color #000000 using no_map_zero, so we start at
+        # color_class 1
+        color_class_offset=1,
         labels_contiguous=True,
+        no_map_zero=True,
     )
     t3 = time.time()
     print("Time to convert from labels to colored image:", t3 - t2)
