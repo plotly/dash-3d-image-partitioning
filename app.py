@@ -712,10 +712,8 @@ def draw_shapes_react(
     print("Time to convert from labels to colored image:", t3 - t2)
     fstc_slices = [
         [
-            array_to_data_url(np.moveaxis(fst_colored, 0, j)[i])
-            if np.any(np.moveaxis(fst_colored, 0, j)[i] != 0)
-            else blank_seg_slices[j]
-            for i in range(fst_colored.shape[j])
+            array_to_data_url(s) if np.any(s != 0) else blank_seg_slices[j]
+            for s in np.moveaxis(fst_colored, 0, j)
         ]
         for j in range(NUM_DIMS_DISPLAYED)
     ]
