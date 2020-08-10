@@ -715,7 +715,7 @@ def draw_shapes_react(
             array_to_data_url(np.moveaxis(fst_colored, 0, j)[i])
             if np.any(np.moveaxis(fst_colored, 0, j)[i] != 0)
             else blank_seg_slices[j]
-            for i in range(np.moveaxis(fst_colored, 0, j).shape[0])
+            for i in range(fst_colored.shape[j])
         ]
         for j in range(NUM_DIMS_DISPLAYED)
     ]
