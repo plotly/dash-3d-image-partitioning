@@ -163,6 +163,9 @@ img_slices, seg_slices = [
 ]
 # initially no slices have been found so we don't draw anything
 found_seg_slices = make_empty_found_segments()
+# store encoded blank slices for each view to save recomputing them for slices
+# containing no colored pixels
+blank_seg_slices = [found_seg_slices[0][0], found_seg_slices[1][0]]
 
 app = dash.Dash(__name__)
 server = app.server
@@ -710,6 +713,8 @@ def draw_shapes_react(
     fstc_slices = [
         [
             array_to_data_url(np.moveaxis(fst_colored, 0, j)[i])
+            if np.any(np.moveaxis(fst_colored, 0, j)[i] != 0)
+            else blank_seg_slices[j]
             for i in range(np.moveaxis(fst_colored, 0, j).shape[0])
         ]
         for j in range(NUM_DIMS_DISPLAYED)
@@ -925,7 +930,6 @@ def populate_3d_graph(
     fig.update_layout(**last_3d_scene)
     end_time = time.time()
     print("serverside 3D generation took: %f seconds" % (end_time - start_time,))
-    # fig.write_json('/tmp/fig.json')
     return (fig, current_render_id)
 
 
