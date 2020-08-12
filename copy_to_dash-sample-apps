@@ -1,0 +1,12 @@
+#!/bin/bash
+
+[ -z $DASH_SAMPLE_APPS_DIR ] && DASH_SAMPLE_APPS_DIR="$HOME/development/dash-sample-apps"
+
+repo_name="$(basename $(pwd))"
+
+copy_to_dir="$DASH_SAMPLE_APPS_DIR/apps/$repo_name"
+
+rm -rf "$copy_to_dir"
+cp -rf "../$repo_name" "$copy_to_dir" \
+    && (echo "Copied to $copy_to_dir" && rm -rf "$copy_to_dir/.git") \
+    || echo "Copy to $copy_to_dir failed."
