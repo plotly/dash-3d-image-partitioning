@@ -852,7 +852,6 @@ function (view_select_button_nclicks,current_render_id) {
     [State("current-render-id", "data")],
 )
 
-# This could in theory be clientside but let's try our luck with serverside
 @app.callback(
     Output("fig-3d-scene", "data"),
     [Input("image-display-graph-3d", "relayoutData")],
