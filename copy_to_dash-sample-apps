@@ -12,10 +12,16 @@ repo_name="$(basename $(pwd))"
 copy_to_dir="$DASH_SAMPLE_APPS_DIR/apps/$repo_name"
 
 rm -rf "$copy_to_dir"
-cp -rf "../$repo_name" "$copy_to_dir" \
-    && (echo "Copied to $copy_to_dir" && \
-        rm -rf \
-            "$copy_to_dir/.git" \
-            "$copy_to_dir/.gitmodules" \
-            "$copy_to_dir/plotly-common/.git") \
+cp -rf "../$repo_name" "$copy_to_dir" && \
+    (echo "Copied to $copy_to_dir" && \
+    rm -rf \
+        "$copy_to_dir/.git" \
+        "$copy_to_dir/.gitmodules" \
+        "$copy_to_dir/plotly-common/.git" \
+        "$copy_to_dir/plotly-common/dash_utils.py" \
+        "$copy_to_dir/plotly-common/debug_utils.py" \
+        "$copy_to_dir/plotly-common/README.md" \
+        "$copy_to_dir/copy_to_dash-sample-apps" \
+        "$copy_to_dir/test~" && \
+    sed -i'' '/^git/ d' "$copy_to_dir/setup") \
     || echo "Copy to $copy_to_dir failed."
